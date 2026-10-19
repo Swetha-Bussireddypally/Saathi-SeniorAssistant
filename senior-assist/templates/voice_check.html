@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ app_name }} — Voice Check</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/fonts.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+  <style>
+    .vc { max-width: 52rem; margin: 0 auto; }
+    .vc h1 { font-size: 1.9rem; margin: .8rem 0 .2rem; letter-spacing: -.01em; }
+    .vc .lead { color: var(--ink-soft); margin: 0 0 1.2rem; }
+    .summary-box { padding: 1rem 1.2rem; border-radius: 18px; font-weight: 700; margin-bottom: 1.2rem; background: var(--surface); box-shadow: var(--shadow); }
+    .summary-box.ok { border: 2px solid #16a34a; }
+    .summary-box.bad { border: 2px solid var(--bad); }
+    .check { background: var(--surface); border-radius: 20px; box-shadow: var(--shadow); padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+    .check-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+    .check h2 { font-size: 1.1rem; margin: 0; }
+    .pill { font-size: .8rem; font-weight: 700; padding: .25rem .7rem; border-radius: 99px; white-space: nowrap; }
+    .pill.ok { background: #e8f8ee; color: #12823b; } .pill.warn { background: #fff4d6; color: #a15c00; }
+    .pill.bad { background: var(--bad-soft); color: var(--bad); } .pill.wait { background: #eef0ff; color: var(--brand); }
+    .detail { color: var(--ink-soft); margin: .5rem 0 0; }
+    .fix { margin: .6rem 0 0; padding: .7rem .9rem; border-radius: 12px; background: #fff7e6; border: 1px solid #f5b33b; }
+    .fix ol { margin: .3rem 0 0; padding-left: 1.2rem; } .fix li { margin: .2rem 0; }
+    .btn { display: inline-flex; align-items: center; gap: .4rem; padding: .65rem 1.1rem; border-radius: 12px; border: none; font-weight: 700; cursor: pointer;
+      background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; font-size: 1rem; }
+    .btn.ghost { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+    .row { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; margin-top: .7rem; }
+    select { font: inherit; padding: .55rem .7rem; border-radius: 12px; border: 1px solid var(--line); }
+    .meter { height: 16px; border-radius: 99px; background: #eef0f6; overflow: hidden; margin-top: .7rem; }
+    .meter > div { height: 100%; width: 0; background: linear-gradient(90deg, #16a34a, #f59e0b, #dc2626); transition: width .08s; }
+    .live { font-size: 1.25rem; font-weight: 700; min-height: 1.6em; margin-top: .7rem; padding: .6rem .8rem; border-radius: 12px; background: #f7f8fc; }
+    .alts { margin: .4rem 0 0; color: var(--ink-soft); }
+    .voices { margin: .5rem 0 0; padding: 0; list-style: none; display: grid; gap: .4rem; }
+    .voices li { display: flex; justify-content: space-between; gap: .6rem; align-items: center; padding: .5rem .7rem; border-radius: 12px; background: #f7f8fc; }
+    code { background: #f1f3f9; padding: .05rem .35rem; border-radius: 6px; }
+  </style>
+</head>
+<body data-user-id="0" data-lang="en">
+  <div class="wrap vc">
+    <nav class="nav"><a class="brand" href="/"><span class="logo">S</span>{{ app_name }}</a><a class="btn-ghost" href="javascript:history.back()">← Back</a></nav>
+    <h1>🎤 Voice Check</h1>
+    <p class="lead">Finds out why voice is not working on this computer or phone, and how to fix it. · आवाज़ जाँच · వాయిస్ చెక్</p>
+
+    <div class="summary-box" id="summary">Checking…</div>
+
+    <section class="check" id="c-browser"><div class="check-head"><h2>1 · Browser</h2><span class="pill wait">…</span></div><p class="detail"></p></section>
+    <section class="check" id="c-secure"><div class="check-head"><h2>2 · Safe address (needed for the microphone)</h2><span class="pill wait">…</span></div><p class="detail"></p></section>
+    <section class="check" id="c-sr"><div class="check-head"><h2>3 · Speech recognition in this browser</h2><span class="pill wait">…</span></div><p class="detail"></p></section>
+    <section class="check" id="c-perm"><div class="check-head"><h2>4 · Microphone permission</h2><span class="pill wait">…</span></div><p class="detail"></p>
+      <div class="row"><button class="btn" id="btn-perm">🎙️ Allow microphone & test sound</button></div>
+      <div class="meter" aria-hidden="true"><div id="meter"></div></div>
+      <p class="detail" id="meter-text">Press the button, then say something — the bar should jump.</p>
+    </section>
+    <section class="check" id="c-net"><div class="check-head"><h2>5 · Internet</h2><span class="pill wait">…</span></div><p class="detail"></p></section>
+    <section class="check" id="c-rec"><div class="check-head"><h2>6 · Speech recognition test</h2><span class="pill wait">Not run</span></div>
+      <p class="detail">Choose a language, press <b>Start</b>, and say: <i id="sample">"I want to pay my electricity bill"</i></p>
+      <div class="row">
+        <select id="lang"><option value="en">English (India)</option><option value="hi">हिन्दी</option><option value="te">తెలుగు</option></select>
+        <button class="btn" id="btn-rec">▶ Start</button>
+      </div>
+      <div class="live" id="live" aria-live="polite"></div>
+      <p class="alts" id="alts"></p>
+      <p class="detail" id="understood"></p>
+    </section>
+    <section class="check" id="c-tts"><div class="check-head"><h2>7 · Saathi's speaking voices</h2><span class="pill wait">…</span></div>
+      <ul class="voices" id="voices"></ul><p class="detail" id="tts-note"></p>
+    </section>
+
+    <section class="check">
+      <h2>🍎 Fix microphone on a Mac (step by step)</h2>
+      <div class="fix"><ol>
+        <li>Use <b>Google Chrome</b> (not Safari) and open <code>http://localhost:5000</code>.</li>
+        <li>Click the <b>🔒 / ⓘ icon</b> left of the web address → <b>Microphone → Allow</b> → reload the page.</li>
+        <li>Open <b> Apple menu → System Settings → Privacy &amp; Security → Microphone</b> → turn <b>Google Chrome ON</b>. Quit Chrome fully (⌘Q) and open it again.</li>
+        <li>Open <b>System Settings → Sound → Input</b> → choose <b>MacBook Air Microphone</b>, speak, and check the input level moves. Raise the input volume if it is low.</li>
+        <li>Make sure the Mac is <b>connected to the internet</b> — Chrome sends speech to Google to turn it into text.</li>
+        <li>For Hindi voices: <b>System Settings → Accessibility → Spoken Content → System voice → Manage Voices…</b> → add a Hindi voice. (Macs usually have no Telugu voice — Saathi still shows Telugu text on screen.)</li>
+      </ol></div>
+    </section>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/i18n.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/voice.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/core.js') }}"></script>
+  <script>
+  (() => {
+    const results = {};
+    const set = (id, state, text, fixHtml) => {
+      const box = document.getElementById(id);
+      const pill = box.querySelector('.pill');
+      pill.className = 'pill ' + state;
+      pill.textContent = { ok: '✅ OK', warn: '⚠️ Check', bad: '❌ Problem', wait: '…' }[state];
+      const d = box.querySelector('.detail');
+      d.innerHTML = text + (fixHtml ? `<div class="fix">${fixHtml}</div>` : '');
+      results[id] = state;
+      const bad = Object.values(results).filter(s => s === 'bad').length;
+      const warn = Object.values(results).filter(s => s === 'warn').length;
+      const sum = document.getElementById('summary');
+      sum.className = 'summary-box ' + (bad ? 'bad' : 'ok');
+      sum.textContent = bad ? `❌ ${bad} problem(s) found — see the red items below for the fix.` :
+        warn ? `⚠️ Mostly fine — ${warn} item(s) to check. Run test 6 to try your voice.` : '✅ Everything checked so far looks good. Run test 6 to try your voice.';
+    };
+    const ua = navigator.userAgent;
+    const isEdge = /Edg\//.test(ua), isChrome = /Chrome\//.test(ua) && !isEdge && !/OPR\//.test(ua);
+    const isSafari = /Safari\//.test(ua) && !/Chrome\//.test(ua), isFirefox = /Firefox\//.test(ua);
+    const isMac = /Macintosh|Mac OS X/.test(ua);
+
+    // 1. browser
+    if (isChrome) set('c-browser', 'ok', 'Google Chrome — the best browser for Saathi voice.');
+    else if (isEdge) set('c-browser', 'warn', 'Microsoft Edge — voice usually works, but Google Chrome is more reliable.');
+    else set('c-browser', 'bad', `${isSafari ? 'Safari' : isFirefox ? 'Firefox' : 'This browser'} does not support Saathi's voice recognition well.`,
+      'Open <b>Google Chrome</b> and go to <code>http://localhost:5000</code>. Download Chrome from google.com/chrome if needed.');
+
+    // 2. secure context
+    if (window.isSecureContext) set('c-secure', 'ok', `Address <code>${location.origin}</code> allows the microphone.`);
+    else set('c-secure', 'bad', `Address <code>${location.origin}</code> is not allowed to use the microphone.`,
+      'Open Saathi as <code>http://localhost:5000</code> on this computer. On a phone over Wi-Fi, use an https link (e.g. ngrok) or the Chrome flag described in the README.');
+
+    // 3. speech recognition API
+    if (Voice.supported) set('c-sr', 'ok', 'This browser has speech recognition.');
+    else set('c-sr', 'bad', 'This browser has no speech recognition.', 'Use <b>Google Chrome</b>. You can still use Saathi by tapping the big buttons.');
+
+    // 4. permission
+    const permState = async () => {
+      try { const p = await navigator.permissions.query({ name: 'microphone' }); return p; } catch (e) { return null; }
+    };
+    const macFix = isMac ? ' On a Mac also: <b>System Settings → Privacy &amp; Security → Microphone → turn on Google Chrome</b>, then quit (⌘Q) and reopen Chrome.' : '';
+    const showPerm = s => {
+      if (s === 'granted') set('c-perm', 'ok', 'Microphone is allowed for Saathi.');
+      else if (s === 'denied') set('c-perm', 'bad', 'Microphone is <b>blocked</b> for this site.', 'Click the <b>🔒 icon</b> left of the address → <b>Microphone → Allow</b> → reload.' + macFix);
+      else set('c-perm', 'warn', 'Chrome has not asked for the microphone yet. Press the button below and choose <b>Allow</b>.');
+    };
+    permState().then(p => { if (p) { showPerm(p.state); p.onchange = () => showPerm(p.state); } else set('c-perm', 'warn', 'Press the button below to test the microphone.'); });
+
+    document.getElementById('btn-perm').onclick = async () => {
+      let stream;
+      try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+      catch (e) {
+        const name = e && e.name;
+        if (name === 'NotAllowedError' || name === 'SecurityError') showPerm('denied');
+        else if (name === 'NotFoundError') set('c-perm', 'bad', 'No microphone was found.', 'Connect a microphone or headset. On a Mac: <b>System Settings → Sound → Input</b> and pick the microphone.');
+        else set('c-perm', 'bad', 'The microphone could not start (' + (name || e) + ').', 'Close other apps using the microphone (Zoom, Meet) and try again.' + macFix);
+        return;
+      }
+      showPerm('granted');
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const src = ctx.createMediaStreamSource(stream), an = ctx.createAnalyser();
+      an.fftSize = 512; src.connect(an);
+      const data = new Uint8Array(an.fftSize);
+      let peak = 0; const t0 = performance.now();
+      const meter = document.getElementById('meter'), txt = document.getElementById('meter-text');
+      txt.textContent = 'Listening for 6 seconds… say something!';
+      const tick = () => {
+        an.getByteTimeDomainData(data);
+        let sum = 0; for (const v of data) sum += ((v - 128) / 128) ** 2;
+        const rms = Math.sqrt(sum / data.length); peak = Math.max(peak, rms);
+        meter.style.width = Math.min(100, rms * 400) + '%';
+        if (performance.now() - t0 < 6000) return requestAnimationFrame(tick);
+        stream.getTracks().forEach(tr => tr.stop()); ctx.close(); meter.style.width = '0';
+        if (peak > 0.04) txt.innerHTML = '✅ The microphone hears you clearly.';
+        else if (peak > 0.012) txt.innerHTML = '⚠️ The microphone hears you, but softly. Speak closer, or raise <b>System Settings → Sound → Input volume</b>.';
+        else txt.innerHTML = '❌ No sound reached the microphone. Check <b>System Settings → Sound → Input</b> (choose the right microphone, raise the volume), and make sure the mic is not muted.';
+      };
+      tick();
+    };
+
+    // 5. internet
+    const net = () => navigator.onLine ? set('c-net', 'ok', 'Online. (Chrome sends speech to Google to turn it into text, so internet is needed for voice.)')
+      : set('c-net', 'bad', 'Offline — voice recognition needs internet.', 'Connect to Wi-Fi. You can still use Saathi by tapping the buttons.');
+    net(); window.addEventListener('online', net); window.addEventListener('offline', net);
+
+    // 6. recognition test
+    const samples = { en: '"I want to pay my electricity bill"', hi: '"मुझे बिजली का बिल भरना है"', te: '"నేను కరెంట్ బిల్లు చెల్లించాలి"' };
+    const langSel = document.getElementById('lang');
+    langSel.onchange = () => { document.getElementById('sample').textContent = samples[langSel.value]; };
+    const reasons = {
+      'not-allowed': ['Microphone is blocked.', 'Allow the microphone (see test 4 and the Mac steps below).'],
+      'service-not-allowed': ['Chrome is not allowed to use speech recognition here.', 'Use Google Chrome on <code>localhost</code>, allow the microphone, and reload.'],
+      'audio-capture': ['No microphone could be used.', 'Check System Settings → Sound → Input, and close apps using the mic.'],
+      'network': ['Chrome could not reach Google speech servers.', 'Check the internet connection. Some college/office Wi-Fi blocks it — try a phone hotspot.'],
+      'language-not-supported': ['This browser cannot recognise that language.', 'Use Google Chrome. Try English to compare.'],
+      'no-speech': ['No speech was heard.', 'Wait for "Listening…", then speak clearly within 2–3 seconds, close to the microphone.'],
+      'unsupported': ['This browser has no speech recognition.', 'Use Google Chrome.'],
+      'insecure': ['This address cannot use the microphone.', 'Open <code>http://localhost:5000</code>.'],
+      'start-failed': ['Recognition could not start.', 'Reload the page and try again.'],
+    };
+    const recBtn = document.getElementById('btn-rec');
+    recBtn.onclick = async () => {
+      if (Voice.isListening()) { Voice.finish(); return; }
+      const live = document.getElementById('live'), alts = document.getElementById('alts'), und = document.getElementById('understood');
+      live.textContent = '🎙️ Listening… speak now'; alts.textContent = ''; und.textContent = '';
+      recBtn.textContent = '■ Stop (use what I said)';
+      set('c-rec', 'wait', document.querySelector('#c-rec .detail').innerHTML);
+      const t0 = performance.now();
+      try {
+        const res = await Voice.listen(langSel.value, { onInterim: txt => { live.textContent = '🎙️ ' + txt; } });
+        live.textContent = '“' + res[0] + '”';
+        alts.innerHTML = res.length > 1 ? 'Other guesses: ' + res.slice(1, 5).map(a => '“' + a.replace(/</g, '&lt;') + '”').join(' · ') : '';
+        const cards = ['bill', 'ticket', 'call', 'scam_check'].map(v => ({ value: v, label: v, words: VOCAB['task_' + v] }));
+        const m = Match.optionScored(res, cards);
+        const names = { bill: '🧾 Pay a bill', ticket: '🎫 Book a ticket', call: '📹 Video call', scam_check: '🛡️ Check a message' };
+        und.innerHTML = m ? `Saathi understood: <b>${names[m.option.value]}</b>` : 'Saathi heard you, but this sentence is not one of its tasks — that is fine for this test.';
+        set('c-rec', 'ok', `✅ Voice recognition works (${((performance.now() - t0) / 1000).toFixed(1)} s).`);
+      } catch (err) {
+        const [what, fix] = reasons[err] || ['Recognition stopped (' + err + ').', 'Try again.'];
+        live.textContent = '';
+        set('c-rec', err === 'no-speech' ? 'warn' : 'bad', what, fix);
+      } finally { recBtn.textContent = '▶ Start'; }
+    };
+
+    // 7. speaking voices
+    const showVoices = () => {
+      const ul = document.getElementById('voices'); ul.innerHTML = '';
+      let missing = [];
+      for (const [k, v] of Object.entries(LANGS)) {
+        const voice = Voice.pickVoice(v.code);
+        if (!voice) missing.push(v.name);
+        const li = document.createElement('li');
+        li.innerHTML = `<span><b>${v.name}</b> — ${voice ? voice.name : '<span style="color:#dc2626">no voice installed</span>'}</span>`;
+        const b = document.createElement('button'); b.className = 'btn ghost'; b.textContent = '🔊 Play';
+        b.onclick = () => Voice.speak(STRINGS[k].choose_lang, k, 0.9);
+        li.appendChild(b); ul.appendChild(li);
+      }
+      if (!missing.length) set('c-tts', 'ok', 'Voices are available for all three languages.');
+      else set('c-tts', 'warn', `No speaking voice for: <b>${missing.join(', ')}</b>. Saathi will still show the text on screen.`,
+        isMac ? 'Add voices: <b>System Settings → Accessibility → Spoken Content → System voice → Manage Voices…</b> (Hindi is available; Telugu usually is not on Mac — Android phones have Telugu).' : 'Install the language voice in your device settings.');
+    };
+    showVoices();
+    try { speechSynthesis.addEventListener('voiceschanged', () => setTimeout(showVoices, 50)); } catch (e) { /* ignore */ }
+  })();
+  </script>
+</body>
+</html>

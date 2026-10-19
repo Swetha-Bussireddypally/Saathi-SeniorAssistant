@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <meta name="theme-color" content="#f4f2fb">
+  <title>{{ app_name }} — your digital helper</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/fonts.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/senior.css') }}">
+</head>
+<body data-jitsi="{{ jitsi_domain }}" data-user-id="{{ user.id }}" data-user-name="{{ user.name }}" data-lang="{{ user.language }}" data-avatar="{{ user.avatar or 'grandpa' }}">
+  <div class="shell">
+   <header class="appbar">
+    <div class="topbar">
+      <div class="brand">
+        <span class="logo" aria-hidden="true">S</span>
+        <span class="brand-text"><span class="brand-name">{{ app_name }}</span><span class="brand-sub" data-t="tagline">Your digital companion</span></span>
+      </div>
+      <button id="btn-menu" class="bell" aria-label="Messages and settings" aria-haspopup="dialog">
+        <span class="ico" data-icon="bell"></span><span class="bell-dot" id="bell-dot" hidden></span>
+      </button>
+    </div>
+
+    <nav class="tools" aria-label="Main controls">
+      <button id="btn-home" class="tool"><span class="ico" data-icon="home"></span><span data-t="home">Home</span></button>
+      <button id="btn-back" class="tool"><span class="ico" data-icon="back"></span><span data-t="back">Back</span></button>
+      <button id="btn-repeat" class="tool"><span class="ico" data-icon="repeat"></span><span data-t="repeat">Repeat</span></button>
+      <button id="btn-history" class="tool"><span class="ico" data-icon="history"></span><span data-t="history">History</span></button>
+      <button id="btn-help" class="tool help"><span class="ico" data-icon="help"></span><span data-t="help">Help</span></button>
+    </nav>
+
+    <a class="user-chip desk-only" href="{{ url_for('logout') }}" title="Logout" id="user-chip">
+      <span class="user-dot">{{ user.name[:1] }}</span><span class="user-name">{{ user.name }}</span>
+      <span class="ico" data-icon="logout"></span>
+    </a>
+   </header>
+
+   <div class="subbar">
+    <div class="main-head desk-only">
+      <p class="main-date" id="main-date"></p>
+      <p class="main-hello"><span data-t="signed_in_as">Signed in as</span> <b>{{ user.name }}</b></p>
+    </div>
+    <div class="settings" role="group" aria-label="Display settings">
+      <button id="btn-smaller" class="set" aria-label="Smaller text">A−</button>
+      <button id="btn-bigger" class="set" aria-label="Bigger text">A+</button>
+      <button id="btn-dark" class="set" aria-pressed="false"><span class="ico" data-icon="moon"></span><span data-t="dark_mode">Dark mode</span></button>
+      <button id="btn-voice" class="set"><span class="ico" data-icon="sound"></span><span data-t="voice_settings">Voice</span></button>
+      <button id="btn-lang" class="set"><span class="ico" data-icon="globe"></span><span data-t="language">Language</span></button>
+    </div>
+   </div>
+
+   <section class="main">
+    <div id="progress" class="progress" hidden>
+      <div class="progress-bar"><div class="progress-fill"></div></div>
+      <span class="progress-text"></span>
+    </div>
+
+    <main id="stage" class="stage" aria-live="polite"></main>
+
+    <footer class="micbar">
+      <p id="heard" class="heard" aria-live="polite"></p>
+      <button id="mic" class="mic" aria-label="Microphone">
+        <span class="mic-icon"><span class="ico" data-icon="mic"></span></span>
+        <span class="mic-label">Tap to speak</span>
+      </button>
+      <p class="together"><span class="ico" data-icon="heart"></span> <span data-t="together">You are not alone — we are with you</span></p>
+      <p class="mic-tip desk-only" data-t="desk_tip">Click the big button and speak, or click any option.</p>
+    </footer>
+   </section>
+  </div>
+
+  <div id="banner" class="banner" role="alert"></div>
+
+  <!-- 🙋 help: trusted family · volunteer · fraud helpline -->
+  <div id="helpsheet" class="vpanel" hidden role="dialog" aria-modal="true" aria-labelledby="hs-title">
+    <div class="vpanel-card" id="hs-body"></div>
+  </div>
+
+  <!-- 🔔 messages + more settings -->
+  <div id="menu" class="vpanel" hidden role="dialog" aria-modal="true" aria-labelledby="menu-title">
+    <div class="vpanel-card">
+      <h2 id="menu-title"><span class="ico" data-icon="bell"></span> <span data-t="notes_title">Messages</span></h2>
+      <div class="notes" id="notes"></div>
+      <div class="menu-links">
+        <a class="menu-link" href="{{ url_for('voice_check') }}" target="_blank" rel="noopener"><span class="ico" data-icon="mic"></span> <span data-t="voice_check_short">Voice check</span></a>
+        <a class="menu-link danger" id="btn-logout" href="{{ url_for('logout') }}"><span class="ico" data-icon="logout"></span> <span data-t="logout">Logout</span></a>
+      </div>
+      <button class="vclose" id="menu-close" data-t="vp_done">Done</button>
+    </div>
+  </div>
+
+  <!-- 🔊 voice settings -->
+  <div id="vpanel" class="vpanel" hidden role="dialog" aria-modal="true" aria-labelledby="vp-title">
+    <div class="vpanel-card">
+      <h2 id="vp-title"><span class="ico" data-icon="sound"></span> <span data-t="vp_title">Saathi's voice</span></h2>
+      <p class="hint" data-t="vp_hint">Choose how Saathi talks to you.</p>
+      <div class="vrow">
+        <button id="vp-on" aria-pressed="true">🔊 <span data-t="vp_on">Talk to me</span></button>
+        <button id="vp-off" aria-pressed="false">🔇 <span data-t="vp_off">Stay quiet</span></button>
+      </div>
+      <div class="vrow">
+        <button id="btn-slow" aria-pressed="true">🐢 <span data-t="slow_voice">Slow</span></button>
+        <button id="vp-normal" aria-pressed="false">🚶 <span data-t="vp_normal">Normal speed</span></button>
+      </div>
+      <h3 data-t="vp_pick">Pick a voice (tap to hear it)</h3>
+      <div class="vlist" id="vp-list"></div>
+      <p class="hint" id="vp-none" hidden></p>
+      <button class="vclose" id="vp-close" data-t="vp_done">Done</button>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/icons.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/i18n.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/voice.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/core.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/ui.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/flows.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/history.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ app_name }} — Senior sign in</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/fonts.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+</head>
+<body>
+  <div class="wrap">
+    <nav class="nav"><a class="brand" href="/"><span class="logo">S</span>{{ app_name }}</a></nav>
+    <main class="auth">
+      <aside class="auth-side senior-side">
+        <p class="side-kicker">Saathi · साथी · సాథీ</p>
+        <h2>Banking, tickets and calls — just by speaking.</h2>
+        <ul class="side-points">
+          <li><span>🎤</span><div><b>Speak in your language</b><small>English, हिन्दी, తెలుగు</small></div></li>
+          <li><span>🛡️</span><div><b>Safe payments</b><small>Saathi reads everything back and asks before paying</small></div></li>
+          <li><span>🤝</span><div><b>Help is one tap away</b><small>Family, a volunteer, or the 1930 fraud helpline</small></div></li>
+        </ul>
+        <p class="side-note">🔒 Saathi will never ask for your OTP.</p>
+      </aside>
+      <form class="card senior-card" method="post" action="{{ url_for('login_senior') }}" id="form" autocomplete="off">
+        <div class="card-top">
+          <span class="role-icon" aria-hidden="true">👵</span>
+          <div>
+            <h1>Welcome · स्वागत है · స్వాగతం</h1>
+            <p class="sub">Senior citizen sign in</p>
+          </div>
+        </div>
+
+        {% if error == 'locked' %}
+        <div class="error" role="alert">🔒 <span>Too many wrong PINs. For your safety this login is locked for {{ lock_minutes }} minute(s).<br>बहुत बार गलत पिन · {{ lock_minutes }} मिनट बाद कोशिश करें · చాలాసార్లు తప్పు పిన్ · {{ lock_minutes }} నిమిషాల తర్వాత ప్రయత్నించండి</span></div>
+        {% elif error %}
+        <div class="error" role="alert">⚠️ <span>Mobile number or PIN is wrong.<br>मोबाइल नंबर या पिन गलत है · మొబైల్ నంబర్ లేదా పిన్ తప్పు</span></div>
+        {% elif expired %}
+        <div class="error" role="alert" style="background:#eef0ff;color:#4f46e5">🕒 <span>You were logged out after some time without use, to keep your account safe. Please sign in again.<br>सुरक्षा के लिए लॉग आउट हुआ · భద్రత కోసం లాగ్ అవుట్ అయింది</span></div>
+        {% endif %}
+        <p class="sub" style="text-align:center;margin:-.3rem 0 .9rem">🔒 Never share your PIN with anyone — not even a caller who says they are from a bank.</p>
+
+        <input type="hidden" name="next" value="{{ next }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="field">
+          <span>📱 Mobile number <small>· मोबाइल नंबर · మొబైల్ నంబర్</small></span>
+          <input class="input big" id="phone" name="phone" inputmode="numeric" maxlength="10" pattern="[0-9]{10}" value="{{ phone }}" placeholder="10 digits" required>
+        </label>
+
+        <div class="field">
+          <span>🔒 4-digit PIN <small>· पिन · పిన్</small></span>
+          <div class="pin-boxes" id="pinboxes" aria-hidden="true">
+            <div class="pin-box"></div><div class="pin-box"></div><div class="pin-box"></div><div class="pin-box"></div>
+          </div>
+          <input class="pin-hidden" id="pin" name="pin" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" aria-label="4-digit PIN" required>
+        </div>
+
+        <div class="keypad" id="keypad">
+          <button type="button" class="key">1</button><button type="button" class="key">2</button><button type="button" class="key">3</button>
+          <button type="button" class="key">4</button><button type="button" class="key">5</button><button type="button" class="key">6</button>
+          <button type="button" class="key">7</button><button type="button" class="key">8</button><button type="button" class="key">9</button>
+          <button type="button" class="key clear" data-k="clear">Clear</button><button type="button" class="key">0</button><button type="button" class="key del" data-k="del" aria-label="Delete">⌫</button>
+        </div>
+
+        <button class="submit" type="submit">Sign in · लॉगिन · లాగిన్ →</button>
+
+        <div class="demo">
+          <h3>Demo accounts — tap to fill</h3>
+          <div class="demo-list">
+            {% for name, ph in demo %}<button type="button" data-phone="{{ ph }}">{{ name }} · {{ ph }}</button>{% endfor %}
+          </div>
+          <p>PIN for all demo accounts: <b>{{ demo_pin }}</b></p>
+        </div>
+
+        <p class="switch">🎤 Voice not working? <a href="{{ url_for('voice_check') }}">Voice Check</a></p>
+        <p class="switch">Are you a volunteer? <a href="{{ url_for('login_volunteer') }}">Volunteer sign in</a></p>
+      </form>
+    </main>
+  </div>
+  <script>
+  (() => {
+    const phone = document.getElementById('phone'), pin = document.getElementById('pin');
+    const boxes = [...document.querySelectorAll('.pin-box')], wrap = document.getElementById('pinboxes');
+    let target = phone.value.length === 10 ? pin : phone;
+    function paint() {
+      boxes.forEach((b, i) => { b.textContent = i < pin.value.length ? '●' : ''; b.classList.toggle('next', i === Math.min(pin.value.length, 3)); });
+      phone.classList.toggle('active', target === phone);
+      wrap.classList.toggle('active', target === pin);
+    }
+    phone.addEventListener('focus', () => { target = phone; paint(); });
+    phone.addEventListener('input', () => { phone.value = phone.value.replace(/\D/g, '').slice(0, 10); if (phone.value.length === 10) { target = pin; } paint(); });
+    wrap.addEventListener('click', () => { target = pin; pin.focus(); paint(); });
+    pin.addEventListener('input', () => { pin.value = pin.value.replace(/\D/g, '').slice(0, 4); paint(); if (pin.value.length === 4 && phone.value.length === 10) document.getElementById('form').requestSubmit(); });
+    document.getElementById('keypad').addEventListener('click', e => {
+      const k = e.target.closest('.key'); if (!k) return;
+      const f = target, max = f === phone ? 10 : 4;
+      if (k.dataset.k === 'del') { if (!f.value && f === pin) target = phone; else f.value = f.value.slice(0, -1); }
+      else if (k.dataset.k === 'clear') { f.value = ''; }
+      else if (f.value.length < max) f.value += k.textContent;
+      if (target === phone && phone.value.length === 10) target = pin;
+      paint();
+      if (pin.value.length === 4 && phone.value.length === 10) document.getElementById('form').requestSubmit();
+    });
+    document.querySelectorAll('[data-phone]').forEach(b => b.onclick = () => { phone.value = b.dataset.phone; pin.value = ''; target = pin; paint(); });
+    paint();
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>{{ app_name }} Speech Accuracy Test</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/fonts.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/volunteer.css') }}">
+  <style>
+    .sentence { font-size: 1.7rem; font-weight: 700; padding: 1rem; border: 2px dashed var(--line); border-radius: 12px; margin: .6rem 0; }
+    .form { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: .7rem; }
+    .form label { display: flex; flex-direction: column; gap: .25rem; color: var(--text-secondary); font-weight: 600; font-size: .85rem; }
+    .rec { font-size: 1.1rem; padding: .7rem 1.4rem; border-radius: 99px; border: none; background: var(--accent); color: var(--surface-1); font-weight: 700; cursor: pointer; }
+    .rec.on { background: var(--critical); }
+    .result { margin-top: .8rem; padding: .7rem .9rem; border-radius: 10px; background: var(--surface-0); }
+    .ok { color: var(--good); font-weight: 700; } .bad { color: var(--critical); font-weight: 700; }
+    .row-btns { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; margin-top: .6rem; }
+    .manual { display: flex; gap: .5rem; margin-top: .6rem; } .manual input { flex: 1; }
+  </style>
+</head>
+<body>
+  <header class="vhead">
+    <div>
+      <h1>🎙️ Speech Recognition Accuracy Test</h1>
+      <p class="sub">Testers read each sentence aloud. The app records what it heard and computes Word Error Rate, Character Error Rate and intent accuracy — per language, accent and noise level.</p>
+    </div>
+    <div class="controls"><a class="navlink" href="/volunteer">← Dashboard</a><span class="who">👤 {{ volunteer_name }}</span><a class="navlink logout" href="{{ url_for('logout') }}">Logout</a></div>
+  </header>
+  <main class="grid">
+    <section class="card span-3">
+      <h2>1 · Tester and conditions</h2>
+      <div class="form">
+        <label>Tester name / code<input id="tester" type="text" placeholder="e.g. T07"></label>
+        <label>Age group<select id="age"><option>60-69</option><option>70-79</option><option>80+</option><option>Under 60</option></select></label>
+        <label>Language<select id="lang"><option value="te">Telugu</option><option value="hi">Hindi</option><option value="en">English</option></select></label>
+        <label>Accent / region<input id="accent" type="text" list="accents" placeholder="e.g. Telangana"></label>
+        <label>Noise level<select id="noise"><option>Quiet (&lt;40 dB)</option><option>Fan / TV (50-60 dB)</option><option>Street / market (65-75 dB)</option></select></label>
+      </div>
+      <datalist id="accents"><option>Telangana</option><option>Coastal Andhra</option><option>Rayalaseema</option><option>Hyderabadi Hindi/Urdu</option><option>North Indian Hindi</option><option>South Indian English</option></datalist>
+    </section>
+
+    <section class="card span-2">
+      <h2>2 · Read this sentence aloud <span class="lang-tag" id="counter"></span></h2>
+      <div class="sentence" id="sentence"></div>
+      <div class="row-btns">
+        <button class="rec" id="rec">🎤 Start recording</button>
+        <button class="btn" id="skip">Skip ›</button>
+        <span class="lang-tag" id="support"></span>
+      </div>
+      <div class="manual"><input type="text" id="manual" placeholder="No mic? Type what an external recogniser (e.g. Bhashini) returned, then Save"><button class="btn" id="save-manual">Save</button></div>
+      <div class="result" id="result" hidden></div>
+    </section>
+
+    <section class="card">
+      <h2>Results so far</h2>
+      <p class="card-sub"><span id="total">0</span> recordings. Copy this table into the test report, or export all rows.</p>
+      <div class="row-btns"><a class="btn" href="/api/speechtest/export.csv">⬇ Export CSV</a><button class="btn" id="clear">Clear results</button></div>
+    </section>
+
+    <section class="card span-3">
+      <h2>Accuracy by language × accent × noise</h2>
+      <table class="tbl" id="summary"></table>
+    </section>
+  </main>
+  <script>
+  const SENTENCES = {
+    te: [['నేను కరెంట్ బిల్లు చెల్లించాలి', 'bill'], ['తిరుపతికి రైలు టికెట్ బుక్ చేయండి', 'ticket'], ['మా అబ్బాయికి వీడియో కాల్ చేయండి', 'call'],
+         ['ఈ మెసేజ్ మోసమా చూడండి', 'scam_check'], ['నీళ్ళ బిల్లు కట్టాలి', 'bill'], ['రేపటికి బస్సు టికెట్ బుక్ చేయండి', 'ticket'],
+         ['ఒకటి రెండు మూడు నాలుగు ఐదు ఆరు ఏడు ఎనిమిది తొమ్మిది సున్నా', ''], ['అవును', ''], ['వద్దు', '']],
+    hi: [['मुझे बिजली का बिल भरना है', 'bill'], ['तिरुपति के लिए ट्रेन का टिकट बुक करो', 'ticket'], ['मेरे बेटे को वीडियो कॉल करो', 'call'],
+         ['यह मैसेज धोखा है क्या जाँचो', 'scam_check'], ['पानी का बिल भरना है', 'bill'], ['कल के लिए बस का टिकट बुक करो', 'ticket'],
+         ['एक दो तीन चार पांच छह सात आठ नौ शून्य', ''], ['हाँ', ''], ['नहीं', '']],
+    en: [['I want to pay my electricity bill', 'bill'], ['Book a train ticket to Tirupati', 'ticket'], ['Make a video call to my son', 'call'],
+         ['Check this message for fraud', 'scam_check'], ['Pay the water bill', 'bill'], ['Book a bus ticket for tomorrow', 'ticket'],
+         ['nine eight seven six five four three two one zero', ''], ['yes', ''], ['no', '']],
+  };
+  const CODES = { te: 'te-IN', hi: 'hi-IN', en: 'en-IN' };
+  const CSRF = document.querySelector('meta[name="csrf-token"]').content;
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  let idx = 0, rec = null;
+  $('support').textContent = SR ? '' : 'Voice recognition not available in this browser — use Chrome, or type results below.';
+  if (!SR) $('rec').disabled = true;
+
+  function cur() { const list = SENTENCES[$('lang').value]; return list[idx % list.length]; }
+  function show() {
+    const list = SENTENCES[$('lang').value];
+    $('sentence').textContent = cur()[0];
+    $('sentence').lang = $('lang').value;
+    $('counter').textContent = `· ${idx % list.length + 1} of ${list.length}`;
+  }
+  $('lang').onchange = () => { idx = 0; show(); };
+  $('skip').onclick = () => { idx++; show(); $('result').hidden = true; };
+
+  async function save(heard) {
+    const [expected, intent] = cur();
+    const r = await fetch('/api/speechtest', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF }, body: JSON.stringify({
+      tester: $('tester').value, age_group: $('age').value, language: $('lang').value, accent: $('accent').value,
+      noise: $('noise').value, expected, heard, expected_intent: intent }) }).then(r => r.json());
+    $('result').hidden = false;
+    $('result').innerHTML = `Heard: <b>“${esc(heard || '(nothing)')}”</b><br>
+      Word accuracy: <b>${Math.round(100 * Math.max(0, 1 - r.wer))}%</b> (WER ${r.wer}) · Character accuracy: <b>${Math.round(100 * Math.max(0, 1 - r.cer))}%</b>
+      ${intent ? `<br>Intent: expected <b>${intent}</b>, detected <b>${r.detected_intent || 'none'}</b> — <span class="${r.intent_ok ? 'ok' : 'bad'}">${r.intent_ok ? '✔ correct' : '✖ wrong'}</span>` : ''}`;
+    idx++; show(); loadSummary();
+  }
+
+  $('rec').onclick = () => {
+    if (rec) { rec.stop(); return; }
+    rec = new SR(); rec.lang = CODES[$('lang').value]; rec.interimResults = false; rec.maxAlternatives = 1;
+    $('rec').classList.add('on'); $('rec').textContent = '■ Listening… (tap to stop)';
+    let got = false;
+    rec.onresult = e => { got = true; save(e.results[0][0].transcript); };
+    rec.onerror = e => { $('support').textContent = 'Error: ' + e.error; };
+    rec.onend = () => { if (!got) save(''); rec = null; $('rec').classList.remove('on'); $('rec').textContent = '🎤 Start recording'; };
+    rec.start();
+  };
+  $('save-manual').onclick = () => { if ($('manual').value.trim()) { save($('manual').value.trim()); $('manual').value = ''; } };
+  $('clear').onclick = async () => { if (confirm('Delete all test results?')) { await fetch('/api/speechtest/clear', { method: 'POST', headers: { 'X-CSRF-Token': CSRF } }); loadSummary(); } };
+
+  async function loadSummary() {
+    const d = await fetch('/api/speechtest/summary').then(r => r.json());
+    $('total').textContent = d.total;
+    if (!d.groups.length) { $('summary').innerHTML = '<tr><td class="empty">No recordings yet. Results appear here as testers read sentences.</td></tr>'; return; }
+    $('summary').innerHTML = '<thead><tr><th>Language</th><th>Accent</th><th>Noise</th><th class="num">Recordings</th><th class="num">Word accuracy</th><th class="num">Char accuracy</th><th class="num">Intent accuracy</th></tr></thead><tbody>' +
+      d.groups.map(g => `<tr><td>${esc(g.language)}</td><td>${esc(g.accent)}</td><td>${esc(g.noise)}</td><td class="num">${g.n}</td>
+        <td class="num">${g.word_accuracy}%</td><td class="num">${g.char_accuracy}%</td><td class="num">${g.intent_accuracy == null ? '—' : g.intent_accuracy + '%'}</td></tr>`).join('') + '</tbody>';
+  }
+  show(); loadSummary();
+  </script>
+</body>
+</html>

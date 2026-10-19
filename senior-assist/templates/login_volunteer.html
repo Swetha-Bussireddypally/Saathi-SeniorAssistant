@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ app_name }} — Volunteer sign in</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/fonts.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+</head>
+<body>
+  <div class="wrap">
+    <nav class="nav"><a class="brand" href="/"><span class="logo">S</span>{{ app_name }}</a></nav>
+    <main class="auth">
+      <aside class="auth-side vol-side">
+        <p class="side-kicker">Volunteer dashboard</p>
+        <h2>See who needs help — and help them in seconds.</h2>
+        <ul class="side-points">
+          <li><span>🔔</span><div><b>Live help queue</b><small>Fraud alerts first, then by time</small></div></li>
+          <li><span>💬</span><div><b>Send a hint</b><small>It is read aloud on the senior's phone</small></div></li>
+          <li><span>📊</span><div><b>Find where people get stuck</b><small>Task funnels, voice failures, speech accuracy</small></div></li>
+        </ul>
+      </aside>
+      <form class="card vol-card" method="post" action="{{ url_for('login_volunteer') }}">
+        <div class="card-top">
+          <span class="role-icon" aria-hidden="true">🤝</span>
+          <div>
+            <h1>Volunteer sign in</h1>
+            <p class="sub">Help seniors who are stuck, in real time</p>
+          </div>
+        </div>
+
+        {% if error %}<div class="error" role="alert">⚠️ <span>{{ error }}</span></div>{% endif %}
+
+        <input type="hidden" name="next" value="{{ next }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="field"><span>Email</span>
+          <input class="input" id="email" name="email" type="email" autocomplete="username" value="{{ email }}" placeholder="you@example.com" required autofocus>
+        </label>
+        <label class="field"><span>Password</span>
+          <div class="pw-row">
+            <input class="input" id="password" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required>
+            <button class="pw-toggle" type="button" id="pw-toggle" aria-label="Show password">Show</button>
+          </div>
+        </label>
+        <button class="submit" type="submit">Sign in →</button>
+
+        <div class="demo">
+          <h3>Demo account — tap to fill</h3>
+          <div class="demo-list"><button type="button" id="fill">{{ demo[0] }} · {{ demo[1] }}</button></div>
+          <p>Email <b>{{ demo[1] }}</b> · Password <b>{{ demo[2] }}</b></p>
+        </div>
+        <p class="switch">Senior citizen? <a href="{{ url_for('login_senior') }}">Sign in here</a></p>
+      </form>
+    </main>
+  </div>
+  <script>
+    const pw = document.getElementById('password');
+    document.getElementById('pw-toggle').onclick = e => { const show = pw.type === 'password'; pw.type = show ? 'text' : 'password'; e.target.textContent = show ? 'Hide' : 'Show'; };
+    document.getElementById('fill').onclick = () => { document.getElementById('email').value = {{ demo[1]|tojson }}; pw.value = {{ demo[2]|tojson }}; };
+  </script>
+</body>
+</html>

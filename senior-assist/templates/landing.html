@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ app_name }} — Welcome</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/fonts.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+</head>
+<body>
+  <div class="wrap">
+    <nav class="nav">
+      <a class="brand" href="/"><span class="logo">S</span>{{ app_name }}</a>
+      <span class="nav-note">SIH 2026 · Team Tech Innovators</span>
+    </nav>
+
+    <header class="hero">
+      <span class="eyebrow">🎤 Voice-first · English · हिन्दी · తెలుగు</span>
+      <h1>Your patient <span class="grad">digital helper</span><br>for everyday tasks</h1>
+      <p>Pay bills, book tickets and video-call family just by speaking — with step-by-step guidance, scam warnings and a safety check before every payment.</p>
+      <p class="langs-line">आपका भरोसेमंद साथी · మీ నమ్మకమైన తోడు</p>
+
+      {% if who %}
+      <div class="signed">
+        <span>Signed in as <b>{{ who[1] }}</b> ({{ 'Senior citizen' if who[0] == 'senior' else 'Volunteer' }})</span>
+        <a class="btn-solid" href="{{ url_for('senior_app') if who[0] == 'senior' else url_for('volunteer') }}">Continue →</a>
+        <a class="btn-ghost" href="{{ url_for('logout') }}">Logout</a>
+      </div>
+      {% endif %}
+    </header>
+
+    <section class="roles" aria-label="Choose how you want to sign in">
+      <a class="role senior" href="{{ url_for('login_senior') }}">
+        <span class="role-icon" aria-hidden="true">👵</span>
+        <h2>I am a Senior Citizen</h2>
+        <p class="multi">मैं वरिष्ठ नागरिक हूँ · నేను సీనియర్ సిటిజన్</p>
+        <ul>
+          <li>Sign in with your mobile number and 4-digit PIN</li>
+          <li>Speak or tap — big buttons, big text</li>
+          <li>Press HELP anytime to reach a volunteer</li>
+        </ul>
+        <span class="cta">Sign in · लॉगिन · లాగిన్ →</span>
+      </a>
+      <a class="role vol" href="{{ url_for('login_volunteer') }}">
+        <span class="role-icon" aria-hidden="true">🤝</span>
+        <h2>I am a Volunteer</h2>
+        <p class="multi">Helpers, family members & NGO staff</p>
+        <ul>
+          <li>See who needs help right now</li>
+          <li>Send hints that are read aloud on their phone</li>
+          <li>Find the steps where seniors get stuck</li>
+        </ul>
+        <span class="cta">Volunteer sign in →</span>
+      </a>
+    </section>
+
+    <div class="features">
+      <span class="chip">🎤 Speak in your language</span>
+      <span class="chip">🛡️ Scam warnings</span>
+      <span class="chip">✅ Confirm before paying</span>
+      <span class="chip">🔠 Large text & high contrast</span>
+      <span class="chip">🆘 One-tap help</span>
+    </div>
+
+    <p class="foot">🎤 Voice not working? <a href="{{ url_for('voice_check') }}">Run the Voice Check</a><br>Prototype — bills, bookings and payments are simulated. No real money moves.</p>
+  </div>
+</body>
+</html>

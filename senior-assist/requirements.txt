@@ -1,0 +1,6 @@
+flask>=3.0
+pypdf>=4.0
+# Optional, for reading PHOTOS of bills (also needs: brew install tesseract tesseract-lang)
+pytesseract>=0.3
+Pillow>=10.0
+pytest>=8.0

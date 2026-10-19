@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>{{ app_name }} Volunteer Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/fonts.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/volunteer.css') }}">
+</head>
+<body>
+  <header class="vhead">
+    <div>
+      <h1>🤝 {{ app_name }} · Volunteer Dashboard</h1>
+      <p class="sub">Where senior users get stuck, who needs help now, and what the voice system fails to understand.</p>
+    </div>
+    <div class="controls">
+      <label>Period
+        <select id="days">
+          <option value="1">Today</option>
+          <option value="7">Last 7 days</option>
+          <option value="14" selected>Last 14 days</option>
+          <option value="30">Last 30 days</option>
+        </select>
+      </label>
+      <span class="live" id="live-dot" title="Refreshes every 5 seconds">● Live</span>
+      <a class="navlink" href="/speech-test">Speech test →</a>
+      <span class="who">👤 {{ volunteer_name }}</span>
+      <a class="navlink logout" href="{{ url_for('logout') }}">Logout</a>
+    </div>
+  </header>
+
+  <div id="demo-note" class="demo-note" hidden>
+    This dashboard includes <b>sample demo activity</b> so the charts are not empty on first run.
+    <button id="clear-demo">Clear demo data</button>
+  </div>
+
+  <main class="grid">
+    <section class="kpis" id="kpis" aria-label="Key numbers"></section>
+
+    <section class="card span-2">
+      <h2>🆘 Needs help now</h2>
+      <p class="card-sub">Seniors who pressed HELP. Send a short hint — it is read aloud on their phone.</p>
+      <div id="help-list"></div>
+    </section>
+
+    <section class="card">
+      <h2>⏳ Struggling right now</h2>
+      <p class="card-sub">Active in the last 30 min, not finished. “Stuck” = 3+ tries on the same step.</p>
+      <div id="live-list"></div>
+    </section>
+
+    <section class="card span-2">
+      <div class="card-head">
+        <h2>Task funnel — how far people get</h2>
+        <div class="tabs" id="funnel-tabs" role="tablist"></div>
+      </div>
+      <p class="card-sub">Sessions that reached each step. The biggest drop between two bars is where to improve the flow.</p>
+      <div id="funnel"></div>
+    </section>
+
+    <section class="card">
+      <h2>Tasks overview</h2>
+      <table class="tbl" id="tasks-tbl"></table>
+    </section>
+
+    <section class="card span-2">
+      <h2>Trouble spots</h2>
+      <p class="card-sub">Steps ranked by drop-offs (people who gave up here) and voice retries (“not understood”).</p>
+      <table class="tbl" id="trouble-tbl"></table>
+    </section>
+
+    <section class="card">
+      <h2>Voice recognition by language</h2>
+      <p class="card-sub">“Not understood” per session — higher means that language/accent needs more vocabulary or a better speech model.</p>
+      <div id="lang-bars"></div>
+    </section>
+
+    <section class="card span-3" id="paylog">
+      <div class="card-head">
+        <div>
+          <h2>📜 Payment &amp; session log</h2>
+          <p class="card-sub">Every payment — paid, failed or stopped (and where) — plus tasks seniors left half-way.</p>
+        </div>
+        <div class="paylog-tools">
+          <select id="pl-user" aria-label="Senior"><option value="">All seniors</option></select>
+          <div class="tabs" id="pl-tabs" role="tablist"></div>
+        </div>
+      </div>
+      <div class="pl-sum" id="pl-sum"></div>
+      <table class="tbl" id="pl-tbl"></table>
+      <h3 class="pl-h3">Left half-way</h3>
+      <table class="tbl" id="pl-sess"></table>
+    </section>
+
+    <section class="card span-3">
+      <h2>Phrases the system did not understand</h2>
+      <p class="card-sub">Add these words to <code>static/js/i18n.js → VOCAB</code> (or <code>intents.py</code>) to improve accent coverage.</p>
+      <table class="tbl" id="fails-tbl"></table>
+    </section>
+  </main>
+  <div id="tip" class="tip" role="tooltip" hidden></div>
+  <script src="{{ url_for('static', filename='js/volunteer.js') }}"></script>
+</body>
+</html>
